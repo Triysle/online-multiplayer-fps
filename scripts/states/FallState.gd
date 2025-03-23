@@ -2,7 +2,6 @@ class_name FallState
 extends State
 
 func physics_update(delta: float) -> void:
-	if not player.is_multiplayer_authority(): return
 	# Get input direction for horizontal movement while falling
 	var input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	

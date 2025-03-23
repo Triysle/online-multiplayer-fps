@@ -2,7 +2,6 @@ class_name ShootState
 extends State
 
 func enter() -> void:
-	if not player.is_multiplayer_authority(): return
 	player.play_shoot_effects.rpc()
 	if player.raycast.is_colliding():
 		var hit_player = player.raycast.get_collider()
@@ -11,7 +10,6 @@ func enter() -> void:
 			player.request_hit_validation.rpc_id(1, hit_player.name, hit_position)
 
 func physics_update(delta: float) -> void:
-	if not player.is_multiplayer_authority(): return
 	# Apply gravity
 	if not player.is_on_floor():
 		player.velocity.y += player.calculate_gravity().y * delta

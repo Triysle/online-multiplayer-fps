@@ -32,9 +32,7 @@ func _ready():
 	states.fall = $StateMachine/FallState
 	states.shoot = $StateMachine/ShootState
 	
-	call_deferred("_initialize_state_machine")
-	
-func _initialize_state_machine():
+	# Set the player reference in the state machine
 	state_machine.player = self
 	state_machine.initialize()
 	
