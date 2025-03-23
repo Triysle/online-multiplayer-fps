@@ -2,9 +2,11 @@ class_name IdleState
 extends State
 
 func enter() -> void:
+	if not player.is_multiplayer_authority(): return
 	player.anim_player.play("idle")
 	
 func physics_update(delta: float) -> void:
+	if not player.is_multiplayer_authority(): return
 	# Check for movement input
 	var input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	if input_dir != Vector2.ZERO:
