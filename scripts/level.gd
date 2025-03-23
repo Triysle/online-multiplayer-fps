@@ -13,7 +13,6 @@ var enet_peer = ENetMultiplayerPeer.new()
 var current_respawn_time = 0.0
 
 func _ready():
-	# Hide respawn UI elements at start
 	respawn_message.hide()
 	respawn_timer.hide()
 
@@ -23,10 +22,6 @@ func _process(delta):
 		if current_respawn_time <= 0:
 			current_respawn_time = 0
 		respawn_timer.text = str(int(ceil(current_respawn_time)))
-
-func _unhandled_input(event):
-	if Input.is_action_just_pressed("quit"):
-		get_tree().quit()
 
 func _on_host_button_pressed():
 	main_menu.hide()
