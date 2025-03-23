@@ -124,7 +124,7 @@ theme_override_constants/margin_bottom = 15
 layout_mode = 2
 theme_override_constants/separation = 15
 
-[node name="Label" type="Label" parent="CanvasLayer/MainMenu/MarginContainer/VBoxContainer"]
+[node name="MenuLabel" type="Label" parent="CanvasLayer/MainMenu/MarginContainer/VBoxContainer"]
 layout_mode = 2
 text = "Main Menu"
 horizontal_alignment = 1
@@ -142,6 +142,11 @@ text = "Join"
 layout_mode = 2
 placeholder_text = "Enter IP Address"
 alignment = 1
+
+[node name="StatusLabel" type="Label" parent="CanvasLayer/MainMenu/MarginContainer/VBoxContainer"]
+layout_mode = 2
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="HUD" type="Control" parent="CanvasLayer"]
 visible = false
@@ -181,6 +186,13 @@ theme_override_styles/fill = SubResource("StyleBoxFlat_ppgk2")
 max_value = 3.0
 value = 3.0
 show_percentage = false
+
+[node name="NetworkStatusLabel" type="Label" parent="CanvasLayer/HUD"]
+layout_mode = 0
+offset_left = 5.0
+offset_top = 5.0
+offset_right = 45.0
+offset_bottom = 28.0
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
 _spawnable_scenes = PackedStringArray("uid://drnsgx4hsxlw8")
