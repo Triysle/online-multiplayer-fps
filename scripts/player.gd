@@ -1,18 +1,24 @@
 extends CharacterBody3D
 
 signal health_changed(health_value)
+signal respawning(is_respawning)
 
 @onready var camera = $Camera3D
 @onready var anim_player = $AnimationPlayer
 @onready var muzzle_flash = $Camera3D/Pistol/MuzzleFlash
 @onready var raycast = $Camera3D/RayCast3D
+@onready var mesh_instance = $MeshInstance3D
 
 var health = 3
+var is_dead = false
+var respawn_timer = 0.0
+const RESPAWN_TIME = 3.0
 
 const SPEED = 10.0
 const JUMP_VELOCITY = 10
 
 var gravity = 20.0
+var hit_flash_time = 0.0
 
 func _enter_tree():
 	set_multiplayer_authority(str(name).to_int())
@@ -25,6 +31,8 @@ func _ready():
 	
 func _unhandled_input(event):
 	if not is_multiplayer_authority(): return
+	if is_dead: return
+	
 	if event is InputEventMouseMotion:
 		rotate_y(-event.relative.x * .005)
 		camera.rotate_x(-event.relative.y * .005)
@@ -39,6 +47,16 @@ func _unhandled_input(event):
 
 func _physics_process(delta):
 	if not is_multiplayer_authority(): return
+	
+	if is_dead:
+		handle_respawn(delta)
+		return
+	
+	if hit_flash_time > 0:
+		hit_flash_time -= delta
+		if hit_flash_time <= 0:
+			reset_player_material.rpc()
+	
 	# Add the gravity.
 	if not is_on_floor():
 		velocity += get_gravity() * delta
@@ -48,7 +66,6 @@ func _physics_process(delta):
 		velocity.y = JUMP_VELOCITY
 
 	# Get the input direction and handle the movement/deceleration.
-	# As good practice, you should replace UI actions with custom gameplay actions.
 	var input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	var direction = (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	if direction:
@@ -65,8 +82,16 @@ func _physics_process(delta):
 	else:
 		anim_player.play("idle")
 
-
 	move_and_slide()
+
+func handle_respawn(delta):
+	respawn_timer -= delta
+	if respawn_timer <= 0:
+		is_dead = false
+		respawning.emit(false)
+		health = 3
+		health_changed.emit(health)
+		reset_player_material.rpc()
 
 @rpc("call_local")
 func play_shoot_effects():
@@ -78,10 +103,42 @@ func play_shoot_effects():
 @rpc("any_peer")
 func receive_damage():
 	health -= 1
-	if health <= 0:
-		health = 3
-		position = Vector3.ZERO
 	health_changed.emit(health)
+	
+	if health <= 0:
+		die()
+	else:
+		flash_damage.rpc()
+		hit_flash_time = 0.3
+
+func die():
+	is_dead = true
+	respawn_timer = RESPAWN_TIME
+	respawning.emit(true)
+	position = Vector3.ZERO
+	velocity = Vector3.ZERO
+	flash_death.rpc()
+
+@rpc("call_local")
+func flash_damage():
+	if mesh_instance:
+		var material = StandardMaterial3D.new()
+		material.albedo_color = Color(1.0, 0.3, 0.3)
+		mesh_instance.set_surface_override_material(0, material)
+
+@rpc("call_local")
+func flash_death():
+	if mesh_instance:
+		var material = StandardMaterial3D.new()
+		material.albedo_color = Color(0.1, 0.1, 0.1)
+		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		material.albedo_color.a = 0.5
+		mesh_instance.set_surface_override_material(0, material)
+
+@rpc("call_local")
+func reset_player_material():
+	if mesh_instance:
+		mesh_instance.set_surface_override_material(0, null)
 
 func _on_animation_player_animation_finished(anim_name):
 	if anim_name == "shoot":
