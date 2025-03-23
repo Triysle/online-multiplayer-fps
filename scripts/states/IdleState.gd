@@ -10,16 +10,19 @@ func physics_update(delta: float) -> void:
 	# Check for movement input
 	var input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
 	if input_dir != Vector2.ZERO:
+		print("Movement input detected")
 		player.state_machine.change_state(player.states.move)
 		return
 	
 	# Handle jumping
-	if Input.is_action_just_pressed("ui_accept") and player.is_on_floor():
+	if Input.is_action_just_pressed("jump") and player.is_on_floor():
+		print("Jump input detected")
 		player.state_machine.change_state(player.states.jump)
 		return
 	
 	# Handle shooting
 	if Input.is_action_just_pressed("shoot"):
+		print("Shoot input detected")
 		player.state_machine.change_state(player.states.shoot)
 		return
 	

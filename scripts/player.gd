@@ -35,6 +35,7 @@ func _ready():
 	call_deferred("_initialize_state_machine")
 	
 func _initialize_state_machine():
+	print("Player states dictionary: ", states.keys())
 	state_machine.player = self
 	state_machine.initialize()
 	
