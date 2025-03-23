@@ -16,7 +16,7 @@ func physics_update(delta: float) -> void:
 		return
 	
 	# Handle jumping
-	if Input.is_action_just_pressed("jump") and player.is_on_floor():
+	if Input.is_action_just_pressed("ui_accept") and player.is_on_floor():
 		player.state_machine.change_state(player.states.jump)
 		return
 	
