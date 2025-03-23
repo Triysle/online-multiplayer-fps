@@ -4,10 +4,25 @@ extends Node3D
 @onready var address_entry = $CanvasLayer/MainMenu/MarginContainer/VBoxContainer/AddressEntry
 @onready var hud = $CanvasLayer/HUD
 @onready var health_bar = $CanvasLayer/HUD/HealthBar
+@onready var respawn_message = $CanvasLayer/HUD/RespawnMessage
+@onready var respawn_timer = $CanvasLayer/HUD/RespawnTimer
 
 const Player = preload("res://scenes/player.tscn")
 const PORT = 9999
 var enet_peer = ENetMultiplayerPeer.new()
+var current_respawn_time = 0.0
+
+func _ready():
+	# Hide respawn UI elements at start
+	respawn_message.hide()
+	respawn_timer.hide()
+
+func _process(delta):
+	if respawn_timer.visible:
+		current_respawn_time -= delta
+		if current_respawn_time <= 0:
+			current_respawn_time = 0
+		respawn_timer.text = str(int(ceil(current_respawn_time)))
 
 func _unhandled_input(event):
 	if Input.is_action_just_pressed("quit"):
@@ -39,6 +54,7 @@ func add_player(peer_id):
 	add_child(player)
 	if player.is_multiplayer_authority():
 		player.health_changed.connect(update_health_bar)
+		player.respawning.connect(show_respawn_ui)
 
 func remove_player(peer_id):
 	var player = get_node_or_null(str(peer_id))
@@ -48,9 +64,19 @@ func remove_player(peer_id):
 func update_health_bar(health_value):
 	health_bar.value = health_value
 
+func show_respawn_ui(is_respawning):
+	if is_respawning:
+		respawn_message.show()
+		respawn_timer.show()
+		current_respawn_time = 3.0
+	else:
+		respawn_message.hide()
+		respawn_timer.hide()
+
 func _on_multiplayer_spawner_spawned(node):
 	if node.is_multiplayer_authority():
 		node.health_changed.connect(update_health_bar)
+		node.respawning.connect(show_respawn_ui)
 
 func upnp_setup():
 	var upnp = UPNP.new()

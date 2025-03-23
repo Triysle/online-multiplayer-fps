@@ -102,6 +102,9 @@ func play_shoot_effects():
 
 @rpc("any_peer")
 func receive_damage():
+	if is_dead:
+		return
+		
 	health -= 1
 	health_changed.emit(health)
 	
