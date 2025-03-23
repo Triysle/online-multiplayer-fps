@@ -188,7 +188,7 @@ process_material = SubResource("ParticleProcessMaterial_tuyoq")
 draw_pass_1 = SubResource("PlaneMesh_smehm")
 
 [node name="RayCast3D" type="RayCast3D" parent="Camera3D"]
-target_position = Vector3(0, 0, -50)
+target_position = Vector3(0, -1.2, -50)
 collision_mask = 2
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]

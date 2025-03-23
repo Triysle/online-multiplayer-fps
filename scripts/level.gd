@@ -7,7 +7,8 @@ extends Node3D
 @onready var health_bar = $CanvasLayer/HUD/HealthBar
 @onready var respawn_message = $CanvasLayer/HUD/RespawnMessage
 @onready var respawn_timer = $CanvasLayer/HUD/RespawnTimer
-@onready var ammo_display = $CanvasLayer/HUD/AmmoDisplay  # You'll need to add this to your scene
+@onready var ammo_display = $CanvasLayer/HUD/AmmoDisplay
+@onready var reticle = $CanvasLayer/HUD/Reticle
 
 var is_shield_recharging = false
 
@@ -63,7 +64,8 @@ func add_player(peer_id):
 		player.shields_changed.connect(update_shield_bar)
 		player.respawning.connect(show_respawn_ui)
 		player.shield_recharge_started.connect(on_shield_recharge_started)
-		player.ammo_changed.connect(update_ammo_display)  # Connect new signal
+		player.ammo_changed.connect(update_ammo_display)
+		player.target_aimed_at.connect(update_reticle_color)  # Connect the new signal
 
 func remove_player(peer_id):
 	var player = get_node_or_null(str(peer_id))
@@ -88,6 +90,13 @@ func update_shield_bar(shield_value):
 func update_ammo_display(current_ammo, total_ammo):
 	ammo_display.text = "%d / %d" % [current_ammo, total_ammo]
 
+func update_reticle_color(is_aiming_at_target):
+	# Change reticle color based on whether we're aiming at a target
+	if is_aiming_at_target:
+		reticle.modulate = Color(1.0, 0.3, 0.3)  # Red when aiming at enemy
+	else:
+		reticle.modulate = Color(1.0, 1.0, 1.0)  # White/normal otherwise
+
 func show_respawn_ui(is_respawning):
 	if is_respawning:
 		respawn_message.show()
@@ -103,7 +112,8 @@ func _on_multiplayer_spawner_spawned(node):
 		node.shields_changed.connect(update_shield_bar)
 		node.respawning.connect(show_respawn_ui)
 		node.shield_recharge_started.connect(on_shield_recharge_started)
-		node.ammo_changed.connect(update_ammo_display)  # Connect new signal
+		node.ammo_changed.connect(update_ammo_display)
+		node.target_aimed_at.connect(update_reticle_color)  # Connect the new signal
 
 func upnp_setup():
 	var upnp = UPNP.new()

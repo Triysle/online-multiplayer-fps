@@ -4,7 +4,8 @@ signal health_changed(health_value)
 signal shields_changed(shield_value)
 signal respawning(is_respawning)
 signal shield_recharge_started(is_recharging)
-signal ammo_changed(current_ammo, total_ammo)  # New signal for UI updates
+signal ammo_changed(current_ammo, total_ammo)
+signal target_aimed_at(is_aiming)  # New signal for reticle color
 
 @onready var camera = $Camera3D
 @onready var anim_player = $AnimationPlayer
@@ -31,6 +32,9 @@ var shield_recharge_delay = 5.0
 var shield_recharge_rate = 10.0 
 var shield_last_hit_time = 0.0
 
+# Aiming properties
+var is_aiming_at_target = false  # New variable to track target detection
+
 const SPEED = 10.0
 const JUMP_VELOCITY = 10
 
@@ -50,7 +54,7 @@ func _ready():
 	
 	health_changed.emit(health)
 	shields_changed.emit(shields)
-	ammo_changed.emit(current_ammo, total_ammo)  # Initial ammo UI update
+	ammo_changed.emit(current_ammo, total_ammo)
 
 func toggle_mouse_capture():
 	mouse_captured = !mouse_captured
@@ -116,6 +120,20 @@ func _physics_process(delta):
 		hit_flash_time -= delta
 		if hit_flash_time <= 0:
 			reset_player_material.rpc()
+	
+	# Check if we're aiming at a valid target
+	var was_aiming_at_target = is_aiming_at_target
+	is_aiming_at_target = false
+	
+	if raycast.is_colliding():
+		var hit_object = raycast.get_collider()
+		# Check if the hit object is a player (excluding ourselves)
+		if hit_object is CharacterBody3D and hit_object != self and hit_object.has_method("receive_damage"):
+			is_aiming_at_target = true
+	
+	# If the aiming status changed, emit the signal
+	if was_aiming_at_target != is_aiming_at_target:
+		target_aimed_at.emit(is_aiming_at_target)
 	
 	if shields < 100 and Time.get_ticks_msec() / 1000.0 - shield_last_hit_time >= shield_recharge_delay:
 		shields += shield_recharge_rate * delta
@@ -221,7 +239,12 @@ func receive_damage():
 	# Damage amount for pistol
 	var damage = 10
 	
+	# Track what type of damage was taken
+	var shield_hit = false
+	var health_hit = false
+	
 	if shields > 0:
+		shield_hit = true
 		if shields >= damage:
 			shields -= damage
 			damage = 0
@@ -232,13 +255,19 @@ func receive_damage():
 		shields_changed.emit(shields)
 	
 	if damage > 0:
+		health_hit = true
 		health -= damage
 		health_changed.emit(health)
 	
 	if health <= 0:
 		die()
 	else:
-		flash_damage.rpc()
+		# Determine which flash effect to show based on what was hit
+		if health_hit:
+			flash_health_damage.rpc()
+		else:
+			flash_shield_damage.rpc()
+		
 		hit_flash_time = 0.3
 
 func die():
@@ -250,20 +279,28 @@ func die():
 	velocity = Vector3.ZERO
 	flash_death.rpc()
 
-@rpc("call_local")
-func flash_damage():
-	if mesh_instance:
-		var material = StandardMaterial3D.new()
-		material.albedo_color = Color(1.0, 0.3, 0.3)
-		mesh_instance.set_surface_override_material(0, material)
 
 @rpc("call_local")
 func flash_death():
 	if mesh_instance:
 		var material = StandardMaterial3D.new()
-		material.albedo_color = Color(0.1, 0.1, 0.1)
+		material.albedo_color = Color(0.1, 0.1, 0.1)  # Dark gray/black color for death
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		material.albedo_color.a = 0.5
+		material.albedo_color.a = 0.5  # Partial transparency to show the player is dead
+		mesh_instance.set_surface_override_material(0, material)
+
+@rpc("call_local")
+func flash_health_damage():
+	if mesh_instance:
+		var material = StandardMaterial3D.new()
+		material.albedo_color = Color(1.0, 0.3, 0.3)  # Red color for health damage
+		mesh_instance.set_surface_override_material(0, material)
+
+@rpc("call_local")
+func flash_shield_damage():
+	if mesh_instance:
+		var material = StandardMaterial3D.new()
+		material.albedo_color = Color(0.3, 0.7, 1.0)  # Light blue color for shield damage
 		mesh_instance.set_surface_override_material(0, material)
 
 @rpc("call_local")
