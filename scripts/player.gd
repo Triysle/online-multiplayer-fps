@@ -9,10 +9,10 @@ signal health_changed(health_value)
 
 var health = 3
 
-const SPEED = 7.0
+const SPEED = 10.0
 const JUMP_VELOCITY = 10
 
-var gravity = 15.0
+var gravity = 20.0
 
 func _enter_tree():
 	set_multiplayer_authority(str(name).to_int())
@@ -34,9 +34,7 @@ func _unhandled_input(event):
 		play_shoot_effects.rpc()
 		if raycast.is_colliding():
 			var hit_player = raycast.get_collider()
-			if hit_player is CharacterBody3D:
-				var hit_position = raycast.get_collision_point()
-				request_hit_validation.rpc_id(1, hit_player.name, hit_position)
+			hit_player.receive_damage.rpc_id(hit_player.get_multiplayer_authority())
 	
 
 func _physics_process(delta):
@@ -83,28 +81,6 @@ func receive_damage():
 	if health <= 0:
 		health = 3
 		position = Vector3.ZERO
-	health_changed.emit(health)
-	sync_health.rpc(health)
-
-@rpc("any_peer", "call_remote")
-func request_hit_validation(hit_player_name, hit_position):
-	if not multiplayer.is_server():
-		return
-	
-	var hit_player = get_node_or_null("../" + hit_player_name)
-	if not hit_player:
-		return
-	
-	var distance = hit_player.global_position.distance_to(hit_position)
-	if distance > 5.0:
-		print("Hit validation failed: Too far")
-		return
-	
-	hit_player.receive_damage()
-
-@rpc("call_local")
-func sync_health(new_health):
-	health = new_health
 	health_changed.emit(health)
 
 func _on_animation_player_animation_finished(anim_name):
