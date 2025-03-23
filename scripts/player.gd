@@ -1,7 +1,9 @@
 extends CharacterBody3D
 
 signal health_changed(health_value)
+signal shields_changed(shield_value)
 signal respawning(is_respawning)
+signal shield_recharge_started(is_recharging)
 
 @onready var camera = $Camera3D
 @onready var anim_player = $AnimationPlayer
@@ -9,10 +11,16 @@ signal respawning(is_respawning)
 @onready var raycast = $Camera3D/RayCast3D
 @onready var mesh_instance = $MeshInstance3D
 
-var health = 3
+var health = 100 
+var shields = 100 
 var is_dead = false
 var respawn_timer = 0.0
 const RESPAWN_TIME = 3.0
+
+# Shield properties
+var shield_recharge_delay = 5.0 
+var shield_recharge_rate = 10.0 
+var shield_last_hit_time = 0.0
 
 const SPEED = 10.0
 const JUMP_VELOCITY = 10
@@ -30,6 +38,9 @@ func _ready():
 	
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	camera.current = true
+	
+	health_changed.emit(health)
+	shields_changed.emit(shields)
 
 func toggle_mouse_capture():
 	mouse_captured = !mouse_captured
@@ -76,6 +87,11 @@ func _physics_process(delta):
 		if hit_flash_time <= 0:
 			reset_player_material.rpc()
 	
+	if shields < 100 and Time.get_ticks_msec() / 1000.0 - shield_last_hit_time >= shield_recharge_delay:
+		shields += shield_recharge_rate * delta
+		shields = min(shields, 100)
+		shields_changed.emit(shields)
+	
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 
@@ -105,6 +121,15 @@ func _physics_process(delta):
 		if anim_player.current_animation != "shoot":
 			anim_player.play("idle")
 
+	if shields < 100:
+		if Time.get_ticks_msec() / 1000.0 - shield_last_hit_time >= shield_recharge_delay:
+			if shields == 0:
+				shield_recharge_started.emit(true)
+				
+			shields += shield_recharge_rate * delta
+			shields = min(shields, 100)
+			shields_changed.emit(shields)
+			
 	move_and_slide()
 
 func handle_respawn(delta):
@@ -112,8 +137,10 @@ func handle_respawn(delta):
 	if respawn_timer <= 0:
 		is_dead = false
 		respawning.emit(false)
-		health = 3
+		health = 100 
+		shields = 100  
 		health_changed.emit(health)
+		shields_changed.emit(shields)
 		reset_player_material.rpc()
 
 @rpc("call_local")
@@ -127,9 +154,26 @@ func play_shoot_effects():
 func receive_damage():
 	if is_dead:
 		return
+	
+	# Update last hit time for shield recharge delay
+	shield_last_hit_time = Time.get_ticks_msec() / 1000.0
+	
+	# Damage amount for pistol
+	var damage = 10
+	
+	if shields > 0:
+		if shields >= damage:
+			shields -= damage
+			damage = 0
+		else:
+			damage -= shields
+			shields = 0
 		
-	health -= 1
-	health_changed.emit(health)
+		shields_changed.emit(shields)
+	
+	if damage > 0:
+		health -= damage
+		health_changed.emit(health)
 	
 	if health <= 0:
 		die()
