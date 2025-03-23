@@ -1,6 +1,7 @@
 Install Instructions:
 
 1) Download the .zip in exports - https://github.com/Triysle/online-multiplayer-fps/blob/main/exports/Online%20Multiplayer%20FPS.zip
+   (you can just click the link above and then click "view raw" to download it)
 2) Extract all files from the .zip
 3) Run the .exe
 
