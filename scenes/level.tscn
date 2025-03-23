@@ -1,7 +1,8 @@
-[gd_scene load_steps=9 format=3 uid="uid://bfqclggbcq523"]
+[gd_scene load_steps=15 format=3 uid="uid://bfqclggbcq523"]
 
 [ext_resource type="Texture2D" uid="uid://croxii3shk4gn" path="res://addons/kenney_prototype_textures/dark/texture_09.png" id="1_2q6dc"]
 [ext_resource type="Script" uid="uid://dohfnm1gxi278" path="res://scripts/level.gd" id="1_w8frs"]
+[ext_resource type="Texture2D" uid="uid://dj2m6g40is24w" path="res://addons/kenney_particle_pack/circle_05.png" id="3_w8frs"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_f2txt"]
 
@@ -12,16 +13,33 @@ sky_material = SubResource("ProceduralSkyMaterial_f2txt")
 background_mode = 2
 sky = SubResource("Sky_1ainy")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vonw3"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mx8sn"]
 albedo_texture = ExtResource("1_2q6dc")
 uv1_triplanar = true
 
-[sub_resource type="PlaneMesh" id="PlaneMesh_oi3di"]
-material = SubResource("StandardMaterial3D_vonw3")
-size = Vector2(100, 100)
+[sub_resource type="BoxMesh" id="BoxMesh_ppgk2"]
+material = SubResource("StandardMaterial3D_mx8sn")
+size = Vector3(100, 1, 100)
 
-[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_0b4ue"]
-data = PackedVector3Array(50, 0, 50, -50, 0, 50, 50, 0, -50, -50, 0, 50, -50, 0, -50, 50, 0, -50)
+[sub_resource type="BoxShape3D" id="BoxShape3D_2r41h"]
+size = Vector3(100, 1, 100)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_w8frs"]
+albedo_texture = ExtResource("1_2q6dc")
+uv1_triplanar = true
+
+[sub_resource type="BoxMesh" id="BoxMesh_w8frs"]
+material = SubResource("StandardMaterial3D_w8frs")
+size = Vector3(1, 10, 100)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mx8sn"]
+size = Vector3(1, 10, 100)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mx8sn"]
+bg_color = Color(1, 0, 0, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ppgk2"]
+bg_color = Color(0, 1, 0, 1)
 
 [node name="Level" type="Node3D"]
 script = ExtResource("1_w8frs")
@@ -32,13 +50,55 @@ environment = SubResource("Environment_n6hdu")
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.982117, -0.171599, 0.077462, 0, 0.411435, 0.911439, -0.188273, -0.89514, 0.404077, 0, 0, 0)
 
-[node name="Floor" type="MeshInstance3D" parent="."]
-mesh = SubResource("PlaneMesh_oi3di")
+[node name="Boundaries" type="Node" parent="."]
 
-[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
+[node name="Floor" type="StaticBody3D" parent="Boundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
-shape = SubResource("ConcavePolygonShape3D_0b4ue")
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Boundaries/Floor"]
+mesh = SubResource("BoxMesh_ppgk2")
+skeleton = NodePath("../../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Boundaries/Floor"]
+shape = SubResource("BoxShape3D_2r41h")
+
+[node name="Wall0" type="StaticBody3D" parent="Boundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -50, 4.5, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Boundaries/Wall0"]
+mesh = SubResource("BoxMesh_w8frs")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Boundaries/Wall0"]
+shape = SubResource("BoxShape3D_mx8sn")
+
+[node name="Wall1" type="StaticBody3D" parent="Boundaries"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, 4.5, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Boundaries/Wall1"]
+mesh = SubResource("BoxMesh_w8frs")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Boundaries/Wall1"]
+shape = SubResource("BoxShape3D_mx8sn")
+
+[node name="Wall2" type="StaticBody3D" parent="Boundaries"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 4.5, 50)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Boundaries/Wall2"]
+mesh = SubResource("BoxMesh_w8frs")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Boundaries/Wall2"]
+shape = SubResource("BoxShape3D_mx8sn")
+
+[node name="Wall3" type="StaticBody3D" parent="Boundaries"]
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 0, 4.5, -50)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Boundaries/Wall3"]
+mesh = SubResource("BoxMesh_w8frs")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Boundaries/Wall3"]
+shape = SubResource("BoxShape3D_mx8sn")
+
+[node name="Props" type="Node" parent="."]
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
@@ -83,9 +143,49 @@ layout_mode = 2
 placeholder_text = "Enter IP Address"
 alignment = 1
 
+[node name="HUD" type="Control" parent="CanvasLayer"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TextureRect" type="TextureRect" parent="CanvasLayer/HUD"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(0.03, 0.03)
+pivot_offset = Vector2(576, 324)
+texture = ExtResource("3_w8frs")
+stretch_mode = 3
+
+[node name="HealthBar" type="ProgressBar" parent="CanvasLayer/HUD"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 345.0
+offset_top = 14.0
+offset_right = -345.0
+offset_bottom = -588.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/background = SubResource("StyleBoxFlat_mx8sn")
+theme_override_styles/fill = SubResource("StyleBoxFlat_ppgk2")
+max_value = 3.0
+value = 3.0
+show_percentage = false
+
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
 _spawnable_scenes = PackedStringArray("uid://drnsgx4hsxlw8")
 spawn_path = NodePath("..")
 
 [connection signal="pressed" from="CanvasLayer/MainMenu/MarginContainer/VBoxContainer/HostButton" to="." method="_on_host_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/MainMenu/MarginContainer/VBoxContainer/JoinButton" to="." method="_on_join_button_pressed"]
+[connection signal="spawned" from="MultiplayerSpawner" to="." method="_on_multiplayer_spawner_spawned"]
