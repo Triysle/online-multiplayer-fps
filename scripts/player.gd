@@ -4,6 +4,7 @@ signal health_changed(health_value)
 signal shields_changed(shield_value)
 signal respawning(is_respawning)
 signal shield_recharge_started(is_recharging)
+signal ammo_changed(current_ammo, total_ammo)  # New signal for UI updates
 
 @onready var camera = $Camera3D
 @onready var anim_player = $AnimationPlayer
@@ -16,6 +17,14 @@ var shields = 100
 var is_dead = false
 var respawn_timer = 0.0
 const RESPAWN_TIME = 3.0
+
+# Ammo properties
+var max_ammo = 12  # Pistol magazine size
+var current_ammo = 12  # Start with a full magazine
+var total_ammo = 48  # Total spare ammo
+var is_reloading = false  # Reload state flag
+var reload_time = 1.5  # Time in seconds to reload
+var reload_timer = 0.0  # Timer for reload progress
 
 # Shield properties
 var shield_recharge_delay = 5.0 
@@ -41,6 +50,7 @@ func _ready():
 	
 	health_changed.emit(health)
 	shields_changed.emit(shields)
+	ammo_changed.emit(current_ammo, total_ammo)  # Initial ammo UI update
 
 func toggle_mouse_capture():
 	mouse_captured = !mouse_captured
@@ -66,14 +76,28 @@ func _unhandled_input(event):
 		camera.rotate_x(-event.relative.y * .005)
 		camera.rotation.x = clamp(camera.rotation.x, -PI/2, PI/2)
 	
-	if is_dead: return
+	if is_dead or is_reloading: return
 		
 	if Input.is_action_just_pressed("shoot") and anim_player.current_animation != "shoot":
-		play_shoot_effects.rpc()
-		if raycast.is_colliding():
-			var hit_player = raycast.get_collider()
-			hit_player.receive_damage.rpc_id(hit_player.get_multiplayer_authority())
+		if current_ammo > 0:
+			current_ammo -= 1
+			ammo_changed.emit(current_ammo, total_ammo)
+			play_shoot_effects.rpc()
+			
+			if raycast.is_colliding():
+				var hit_player = raycast.get_collider()
+				if hit_player.has_method("receive_damage"):
+					hit_player.receive_damage.rpc_id(hit_player.get_multiplayer_authority())
+					
+			# Automatic reload when magazine is empty
+			if current_ammo == 0 and total_ammo > 0:
+				start_reload()
+		else:
+			# Click sound when empty (would need to add this sound)
+			pass
 	
+	if Input.is_action_just_pressed("reload"):
+		start_reload()
 
 func _physics_process(delta):
 	if not is_multiplayer_authority(): return
@@ -81,6 +105,12 @@ func _physics_process(delta):
 	if is_dead:
 		handle_respawn(delta)
 		return
+	
+	# Handle reload timer
+	if is_reloading:
+		reload_timer -= delta
+		if reload_timer <= 0:
+			complete_reload()
 	
 	if hit_flash_time > 0:
 		hit_flash_time -= delta
@@ -108,7 +138,7 @@ func _physics_process(delta):
 			velocity.x = move_toward(velocity.x, 0, SPEED)
 			velocity.z = move_toward(velocity.z, 0, SPEED)
 		
-		if anim_player.current_animation == "shoot":
+		if anim_player.current_animation == "shoot" or is_reloading:
 			pass
 		elif input_dir != Vector2.ZERO and is_on_floor():
 			anim_player.play("move")
@@ -118,7 +148,7 @@ func _physics_process(delta):
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 		velocity.z = move_toward(velocity.z, 0, SPEED)
 		
-		if anim_player.current_animation != "shoot":
+		if anim_player.current_animation != "shoot" and not is_reloading:
 			anim_player.play("idle")
 
 	if shields < 100:
@@ -138,10 +168,40 @@ func handle_respawn(delta):
 		is_dead = false
 		respawning.emit(false)
 		health = 100 
-		shields = 100  
+		shields = 100
+		current_ammo = max_ammo
+		total_ammo = 48  # Reset total ammo too
 		health_changed.emit(health)
 		shields_changed.emit(shields)
+		ammo_changed.emit(current_ammo, total_ammo)
 		reset_player_material.rpc()
+
+func start_reload():
+	if is_reloading or current_ammo == max_ammo or total_ammo <= 0:
+		return
+		
+	is_reloading = true
+	reload_timer = reload_time
+	play_reload_animation.rpc()  # This would be a new animation to add
+
+func complete_reload():
+	is_reloading = false
+	
+	var ammo_needed = max_ammo - current_ammo
+	var ammo_to_reload = min(ammo_needed, total_ammo)
+	
+	current_ammo += ammo_to_reload
+	total_ammo -= ammo_to_reload
+	
+	ammo_changed.emit(current_ammo, total_ammo)
+
+@rpc("call_local")
+func play_reload_animation():
+	# You'll need to create a reload animation and add it to your AnimationPlayer
+	# For now, we'll just play the idle animation
+	anim_player.stop()
+	anim_player.play("idle")
+	# When you create a reload animation, replace "idle" with "reload"
 
 @rpc("call_local")
 func play_shoot_effects():
@@ -183,6 +243,7 @@ func receive_damage():
 
 func die():
 	is_dead = true
+	is_reloading = false  # Cancel any reload if player dies
 	respawn_timer = RESPAWN_TIME
 	respawning.emit(true)
 	position = Vector3.ZERO
@@ -213,3 +274,7 @@ func reset_player_material():
 func _on_animation_player_animation_finished(anim_name):
 	if anim_name == "shoot":
 		anim_player.play("idle")
+	# When you create a reload animation, add this:
+	# elif anim_name == "reload":
+	#     is_reloading = false
+	#     complete_reload()

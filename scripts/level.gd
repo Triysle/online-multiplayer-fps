@@ -7,6 +7,7 @@ extends Node3D
 @onready var health_bar = $CanvasLayer/HUD/HealthBar
 @onready var respawn_message = $CanvasLayer/HUD/RespawnMessage
 @onready var respawn_timer = $CanvasLayer/HUD/RespawnTimer
+@onready var ammo_display = $CanvasLayer/HUD/AmmoDisplay  # You'll need to add this to your scene
 
 var is_shield_recharging = false
 
@@ -62,6 +63,7 @@ func add_player(peer_id):
 		player.shields_changed.connect(update_shield_bar)
 		player.respawning.connect(show_respawn_ui)
 		player.shield_recharge_started.connect(on_shield_recharge_started)
+		player.ammo_changed.connect(update_ammo_display)  # Connect new signal
 
 func remove_player(peer_id):
 	var player = get_node_or_null(str(peer_id))
@@ -83,6 +85,9 @@ func update_shield_bar(shield_value):
 		if style is StyleBoxFlat:
 			style.bg_color = Color(0, 1, 1, 1)
 
+func update_ammo_display(current_ammo, total_ammo):
+	ammo_display.text = "%d / %d" % [current_ammo, total_ammo]
+
 func show_respawn_ui(is_respawning):
 	if is_respawning:
 		respawn_message.show()
@@ -98,6 +103,7 @@ func _on_multiplayer_spawner_spawned(node):
 		node.shields_changed.connect(update_shield_bar)
 		node.respawning.connect(show_respawn_ui)
 		node.shield_recharge_started.connect(on_shield_recharge_started)
+		node.ammo_changed.connect(update_ammo_display)  # Connect new signal
 
 func upnp_setup():
 	var upnp = UPNP.new()
