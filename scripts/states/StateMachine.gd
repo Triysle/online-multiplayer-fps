@@ -6,7 +6,15 @@ var current_state: State
 var states: Dictionary = {}
 
 func _ready() -> void:
-	pass
+	for child in get_children():
+		if child is State:
+			states[child.name.to_lower()] = child
+			child.player = player
+	
+	# Set initial state
+	if states.has("idle"):
+		current_state = states.idle
+		current_state.enter()
 
 func _process(delta: float) -> void:
 	if current_state:
@@ -28,15 +36,3 @@ func change_state(new_state: State) -> void:
 	
 	current_state = new_state
 	current_state.enter()
-
-func initialize() -> void:
-	# Set up state references
-	for child in get_children():
-		if child is State:
-			states[child.name.to_lower()] = child
-			child.player = player
-	
-	# Set initial state
-	if states.has("idle"):
-		current_state = states.idle
-		current_state.enter()

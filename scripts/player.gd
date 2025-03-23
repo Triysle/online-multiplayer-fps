@@ -34,7 +34,6 @@ func _ready():
 	
 	# Set the player reference in the state machine
 	state_machine.player = self
-	state_machine.initialize()
 	
 func _unhandled_input(event):
 	if not is_multiplayer_authority(): return
