@@ -13,6 +13,8 @@ extends Node3D
 var is_shield_recharging = false
 
 const Player = preload("res://scenes/player.tscn")
+const PORT = 9999
+var enet_peer = ENetMultiplayerPeer.new()
 var current_respawn_time = 0.0
 
 func _ready():
@@ -24,9 +26,6 @@ func _ready():
 	
 	shield_bar.max_value = 100 
 	shield_bar.value = 100
-	
-	NetworkManager.player_connected.connect(add_player)
-	NetworkManager.player_disconnected.connect(remove_player)
 
 func _process(delta):
 	if respawn_timer.visible:
@@ -39,13 +38,21 @@ func _on_host_button_pressed():
 	main_menu.hide()
 	hud.show()
 	
-	NetworkManager.create_server()
+	enet_peer.create_server(PORT)
+	multiplayer.multiplayer_peer = enet_peer
+	multiplayer.peer_connected.connect(add_player)
+	multiplayer.peer_disconnected.connect(remove_player)
+
+	add_player(multiplayer.get_unique_id())
+	
+	upnp_setup()
 
 func _on_join_button_pressed():
 	main_menu.hide()
 	hud.show()
 	
-	NetworkManager.create_client(address_entry.text)
+	enet_peer.create_client(address_entry.text, PORT)
+	multiplayer.multiplayer_peer = enet_peer
 
 func add_player(peer_id):
 	var player = Player.instantiate()
@@ -58,7 +65,7 @@ func add_player(peer_id):
 		player.respawning.connect(show_respawn_ui)
 		player.shield_recharge_started.connect(on_shield_recharge_started)
 		player.ammo_changed.connect(update_ammo_display)
-		player.target_aimed_at.connect(update_reticle_color)
+		player.target_aimed_at.connect(update_reticle_color)  # Connect the new signal
 
 func remove_player(peer_id):
 	var player = get_node_or_null(str(peer_id))
@@ -84,10 +91,11 @@ func update_ammo_display(current_ammo, total_ammo):
 	ammo_display.text = "%d / %d" % [current_ammo, total_ammo]
 
 func update_reticle_color(is_aiming_at_target):
+	# Change reticle color based on whether we're aiming at a target
 	if is_aiming_at_target:
-		reticle.modulate = Color(1.0, 0.3, 0.3)
+		reticle.modulate = Color(1.0, 0.3, 0.3)  # Red when aiming at enemy
 	else:
-		reticle.modulate = Color(1.0, 1.0, 1.0)
+		reticle.modulate = Color(1.0, 1.0, 1.0)  # White/normal otherwise
 
 func show_respawn_ui(is_respawning):
 	if is_respawning:
@@ -105,7 +113,19 @@ func _on_multiplayer_spawner_spawned(node):
 		node.respawning.connect(show_respawn_ui)
 		node.shield_recharge_started.connect(on_shield_recharge_started)
 		node.ammo_changed.connect(update_ammo_display)
-		node.target_aimed_at.connect(update_reticle_color)
+		node.target_aimed_at.connect(update_reticle_color)  # Connect the new signal
+
+func upnp_setup():
+	var upnp = UPNP.new()
+	
+	var discover_result = upnp.discover()
+	assert(discover_result == UPNP.UPNP_RESULT_SUCCESS, "UPNP Discover Failed! Error %s" % discover_result)
+	assert(upnp.get_gateway() and upnp.get_gateway().is_valid_gateway(), "UPNP Invalid Gateway!")
+	
+	var map_result = upnp.add_port_mapping(PORT)
+	assert(map_result == UPNP.UPNP_RESULT_SUCCESS, "UPNP Port Mapping Failed! Error %s" % map_result)
+	
+	print("Success! Join Address: %s" % upnp.query_external_address())
 
 func on_shield_recharge_started(is_recharging):
 	is_shield_recharging = is_recharging
